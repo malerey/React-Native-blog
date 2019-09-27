@@ -1,8 +1,10 @@
 import React from 'react';
 import { StyleSheet, Text, View, ScrollView, Image, TouchableHighlight, Modal } from 'react-native';
 import { Container, Item, Form, Input, Button, Label } from "native-base";
+import Markdown from 'react-native-markdown-renderer';
 import * as firebase from "firebase";
-import config from './helpers/config'
+import config from './helpers/config';
+import publicContent from './helpers/mock'
 
 firebase.initializeApp(config);
 
@@ -13,12 +15,12 @@ export default class App extends React.Component {
       email: "",
       password: "",
       authenticatedUser: false,
-      isLoading: false,
       modalVisible: false,
+      entries: [],
+      blogEntry: "",
     };
   }
 
-  
   SignUp = (email, password) => {
     try {
       firebase.auth().createUserWithEmailAndPassword(email, password);
@@ -30,9 +32,10 @@ export default class App extends React.Component {
   SignIn = (email, password) => {
     try {
       firebase.auth().signInWithEmailAndPassword(email, password);
-      firebase.auth().onAuthStateChanged(user => {
-
+      firebase.auth().onAuthStateChanged(() => {
         this.getInfo()
+        this.setState({ authenticatedUser: true })
+
       })
     } catch (error) {
       console.log(error.toString(error));
@@ -41,7 +44,7 @@ export default class App extends React.Component {
 
 
   getInfo = () => {
-    this.setState({ isLoading: true })
+    this.setState({ blogEntry: "" })
     const space_id = "ol6anbnvrzl6"
     const access_token = "bvsDVcVVS4_j5iBOEM4u0yOLH7VGvoZkZnuqWXqha7Y"
     const entries_link = `https://cdn.contentful.com/spaces/${space_id}/entries?access_token=${access_token}`
@@ -60,8 +63,6 @@ export default class App extends React.Component {
         const data = JSON.parse(json)
         this.formatData(data)
       });
-
-
   }
 
   formatData = data => {
@@ -85,9 +86,7 @@ export default class App extends React.Component {
       })
     })
     this.setState({
-      entries: entries,
-      isLoading: false,
-      authenticatedUser: true
+      entries
     })
   }
 
@@ -99,12 +98,12 @@ export default class App extends React.Component {
     this.setState({ blogEntry: item });
   }
 
-
   render() {
     return (
       <Container style={styles.container}>
         {this.state.authenticatedUser
-          ? <View style={styles.container}>
+          ? 
+          <View style={styles.container}>
             <View style={styles.header}>
               <Text style={styles.header_title}>List of Entries</Text>
             </View>
@@ -131,6 +130,12 @@ export default class App extends React.Component {
                   </TouchableHighlight>
                 )
               }
+
+              <Button full rounded style={{ margin: 20 }}
+                onPress={() => this.setState({authenticatedUser: false})}
+              >
+                <Text>Log out</Text>
+              </Button>
             </ScrollView>
             <Modal
               animationType="slide"
@@ -175,10 +180,10 @@ export default class App extends React.Component {
                             <Text style={styles.item_author}>{this.state.blogEntry.author.fields.title}</Text>
                           </View>
                         </View>
-                        <View>
-                            <Text style={styles.modal_body}>{this.state.blogEntry.fields.body}</Text>
-                            
-                          </View>
+                        <View style={styles.modal_body}>
+                          <Markdown >{this.state.blogEntry.fields.body}</Markdown>
+
+                        </View>
                       </>
                       :
                       <Text>Loading...</Text>
@@ -189,8 +194,8 @@ export default class App extends React.Component {
             </Modal>
           </View>
           :
-          <Form style={{ backgroundColor: "#fff" }}>
-            <Item floatingLabel>
+          <Form style={styles.form}>
+            <Item floatingLabel style={{ marginBottom: 20 }}>
               <Label>Email</Label>
               <Input
                 autoCapitalize="none"
@@ -198,7 +203,7 @@ export default class App extends React.Component {
                 onChangeText={email => this.setState({ email })}
               />
             </Item>
-            <Item floatingLabel>
+            <Item floatingLabel style={{ marginBottom: 20 }}>
               <Label>Password</Label>
               <Input
                 secureTextEntry={true}
@@ -207,16 +212,65 @@ export default class App extends React.Component {
                 onChangeText={password => this.setState({ password })}
               />
             </Item>
-            <Button full rounded
+            <Button full rounded style={{ margin: 20 }}
               onPress={() => this.SignIn(this.state.email, this.state.password)}
             >
               <Text>SignIn</Text>
             </Button>
-            <Button full rounded success style={{ marginTop: 20 }}
+            <Button full rounded success style={{ margin: 20 }}
               onPress={() => this.SignUp(this.state.email, this.state.password)}>
               <Text>Signup</Text>
             </Button>
+            <Button full rounded warning style={{ margin: 20 }}
+              onPress={() => {
+                this.setModalVisible(true)
+                this.setBlogEntry(publicContent)
+              }}
+            >
+              <Text>Access public content</Text>
+            </Button>
+            <Modal
+              animationType="slide"
+              transparent={false}
+              visible={this.state.modalVisible}
+              onRequestClose={() => { this.setModalVisible(false); }}
+            >
+              <View style={styles.modal_cont}>
+                <View style={styles.modal_header}>
+                  <TouchableHighlight
+                    style={styles.close_modal}
+                    onPress={() => { this.setModalVisible(false); }}
+                  >
+                    <Image
+                      style={styles.close_modal}
+                      source={require('./helpers/back.png')}
+                    />
+                  </TouchableHighlight>
+                </View>
+                <ScrollView>
+                  <View style={styles.modal_main}>
+                    {this.state.blogEntry && this.state.blogEntry.fields
+                      ?
+                      <>
+                        <Image
+                          style={styles.modal_img}
+                          source={{ uri: `https:${this.state.blogEntry.fields.heroImage.link.file.url}` }}
+                          alt={this.state.blogEntry.fields.heroImage.link.description}
+                        />
+                        <View styles={styles.modal_title_cont}>
+                          <Text style={styles.modal_title}>{this.state.blogEntry.fields.title}</Text>
+                          <Text style={styles.modal_subtitle}>{this.state.blogEntry.fields.description}</Text>
+                        </View>
+                      </>
+                      :
+                      <Text>Loading...</Text>
+                    }
+                  </View>
+                </ScrollView>
+              </View>
+            </Modal>
           </Form>
+
         }
       </Container>
 
@@ -227,22 +281,23 @@ export default class App extends React.Component {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#05101a',
+    justifyContent: 'center',
+  },
+  form: {
+    justifyContent: 'space-between',
   },
   header: {
     paddingTop: 80,
     paddingBottom: 10,
-    backgroundColor: '#535353',
+    backgroundColor: '#FFC125',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
   },
   header_title: {
     fontWeight: 'bold',
-    color: '#fff'
   },
   title: {
-    color: '#fff',
     fontSize: 15,
   },
   list_item: {
@@ -260,33 +315,27 @@ const styles = StyleSheet.create({
     marginLeft: 10
   },
   item_name: {
-    color: '#fff',
     fontWeight: 'bold',
     fontSize: 15
   },
   item_author: {
-    color: '#b3b3b3',
     fontSize: 12
   },
   modal_cont: {
     paddingTop: 30,
     flex: 1,
-    backgroundColor: '#05101a',
   },
   modal_header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 20
   },
   close_modal: {
     width: 20,
     height: 20,
-    marginLeft: 10,
-    marginRight: 10
+    margin: 10
   },
   modal_main: {
     flex: 1,
-    backgroundColor: '#05101a',
   },
   modal_img: {
     marginTop: 20,
@@ -302,25 +351,21 @@ const styles = StyleSheet.create({
   modal_title: {
     fontSize: 30,
     fontWeight: 'bold',
-    color: '#fff',
     marginLeft: 20,
     marginRight: 20
   },
   modal_subtitle: {
     fontSize: 20,
-    color: '#fff',
     marginLeft: 20,
     marginRight: 20
   },
-  modal_body: {
-    fontSize: 16,
-    color: '#fff',
-    margin: 20,
-  },
   modal_author: {
-    color: '#b3b3b3',
     fontSize: 9,
     letterSpacing: 1
+  },
+  modal_body: {
+    padding: 20,
+    paddingTop: 0,
   }
 });
 
