@@ -45,8 +45,7 @@ export default ModalView = props => {
                   </View>
                 </View>
                 <View style={styles.modal_body}>
-                  <Markdown >{blogEntry.fields.body}</Markdown>
-
+                  <Markdown>{blogEntry.fields.body}</Markdown>
                 </View>
               </>
               :

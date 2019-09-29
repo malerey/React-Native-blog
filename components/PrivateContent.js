@@ -47,6 +47,7 @@ export default class PrivateContent extends React.Component {
           {
             this.state.entries.map((item, i) =>
               <BlogEntry
+                key={i}
                 item={item}
                 setModalVisible={this.props.setModalVisible}
                 setBlogEntry={this.props.setBlogEntry}
