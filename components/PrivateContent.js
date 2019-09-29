@@ -3,7 +3,8 @@ import { Text, View, ScrollView } from 'react-native';
 import { Button } from "native-base";
 import BlogEntry from './BlogEntry';
 import ModalView from './ModalView';
-import formatData from '../helpers/formatData'
+import formatData from '../helpers/formatData';
+const { createClient } = require('contentful/dist/contentful.browser.min.js')
 
 export default class PrivateContent extends React.Component {
   constructor(props) {
@@ -16,25 +17,17 @@ export default class PrivateContent extends React.Component {
   componentDidMount() {
     const space_id = "ol6anbnvrzl6"
     const access_token = "bvsDVcVVS4_j5iBOEM4u0yOLH7VGvoZkZnuqWXqha7Y"
-    const entries_link = `https://cdn.contentful.com/spaces/${space_id}/entries?access_token=${access_token}`
-    fetch(entries_link, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      }
+    const client = createClient({
+      space: space_id ,
+      accessToken: access_token,
     })
-      .then(function (response) {
-        return response.json();
-      })
-      .then(myJson => {
-        const json = JSON.stringify(myJson)
-        const data = JSON.parse(json)
-        this.setData(data)
-      });
+    client.getEntries()
+    .then((response) => this.setData(response))
+    .catch(console.error)
   }
 
   setData = data => {
+    console.log(data)
     const entries = formatData(data)
     this.setState({
       entries
@@ -62,7 +55,7 @@ export default class PrivateContent extends React.Component {
             )
           }
 
-          <Button full rounded 
+          <Button full rounded
             style={{ margin: 20 }}
             onPress={signOut}
           >
